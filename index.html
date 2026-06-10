@@ -614,6 +614,26 @@ function showResult(){
   const pct=Math.round(score/questions.length*100);
   const msg=pct===100?'완벽합니다! 모두 맞혔어요 🏆':pct>=70?'잘 하셨어요! 조금만 더 연습하면 완벽 👍':pct>=40?'절반 넘겼어요! 복습하고 다시 도전해 보세요 📚':'처음엔 누구나 어렵습니다. 다시 도전해 보세요 💪';
   const badges=playingNames.map(n=>`<span class="playing-badge">📂 ${escHtml(n)}</span>`).join('');
+
+  // 틀린 문제 수집
+  const wrongQs=order.map((qi,idx)=>({q:questions[qi],correct:results[idx]})).filter(x=>x.correct===false).map(x=>x.q);
+  const wrongCount=wrongQs.length;
+
+  // 틀린 문제 목록 HTML
+  let wrongListHtml='';
+  if(wrongCount>0){
+    wrongListHtml=`
+      <div style="margin-top:1.75rem;text-align:left">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem">틀린 문제 (${wrongCount}개)</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${wrongQs.map((q,i)=>{
+            const text=q.raw.replace(/\[([^\]]+)\]/g,(_,a)=>`<span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--red);background:var(--red-light);border-radius:4px;padding:1px 6px">${escHtml(a)}</span>`);
+            return`<div style="background:var(--red-light);border:1px solid #f0a0a0;border-radius:var(--radius);padding:.65rem 1rem;font-size:13px;line-height:1.8"><span style="font-size:11px;font-weight:700;color:var(--red);margin-right:6px">${i+1}.</span>${text}</div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
+
   document.getElementById('quiz-main').innerHTML=`
     ${badges?`<div class="playing-badges">${badges}</div>`:''}
     <div class="result-card">
@@ -622,11 +642,20 @@ function showResult(){
       <div class="result-label">${questions.length}문제 중 ${score}개 정답</div>
       <div class="result-msg">${msg}</div>
       <div class="result-actions">
-        <button onclick="restartQuiz()">🔀 다시 풀기</button>
+        <button onclick="restartQuiz()">🔀 전체 다시 풀기</button>
+        ${wrongCount>0?`<button class="btn-danger" style="background:var(--red-light);border-color:#f0a0a0;color:var(--red)" onclick="reviewWrong()">📖 틀린 문제 복습 (${wrongCount}개)</button>`:''}
         <button onclick="switchTab('library')">📚 라이브러리로</button>
       </div>
+      ${wrongListHtml}
     </div>`;
   renderList();document.getElementById('badge-quiz').classList.remove('visible');
+}
+
+function reviewWrong(){
+  // 틀린 문제만 모아서 다시 출제
+  const wrongQs=order.map((qi,idx)=>({q:questions[qi],correct:results[idx]})).filter(x=>x.correct===false).map(x=>x.q);
+  if(!wrongQs.length)return;
+  startQuiz(wrongQs, playingNames.map(n=>`${n} (복습)`));
 }
 
 /* ══ PAGE 4: Settings / Gist Sync ══ */
